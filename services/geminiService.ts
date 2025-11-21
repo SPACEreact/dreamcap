@@ -182,6 +182,7 @@ export const generateShotsFromScript = async (script: string, directorInstructio
     `;
 
   try {
+    console.log("Sending script to Gemini for shot generation...");
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-pro',
       contents: prompt,
@@ -201,6 +202,7 @@ export const generateShotsFromScript = async (script: string, directorInstructio
     });
 
     const jsonText = response.text.trim();
+    console.log("Gemini response received:", jsonText.substring(0, 200) + "..."); // Log first 200 chars
     const parsed = JSON.parse(jsonText);
 
     const story = {
@@ -215,11 +217,16 @@ export const generateShotsFromScript = async (script: string, directorInstructio
       }))
       : [];
 
+    if (shots.length === 0) {
+      console.warn("Gemini returned 0 shots.");
+    }
+
     return { story, shots };
 
   } catch (error) {
     console.error("Error generating shots from script:", error);
-    throw new Error("Failed to generate shots from script via Gemini.");
+    // Return empty but don't throw to avoid crashing, let App handle empty shots
+    return { story: { title: '', logline: '' }, shots: [] };
   }
 };
 

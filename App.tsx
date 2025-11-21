@@ -130,6 +130,11 @@ const App: React.FC = () => {
   };
 
   const handleScriptProcessComplete = (processedStory: Story, processedShots: Shot[], instructions: string, vision?: DirectorVisionType) => {
+    if (processedShots.length === 0) {
+      alert("The AI could not generate a shot list from this script. Please try again or check the script content.");
+      return;
+    }
+
     setStory({
       ...story,
       title: processedStory.title,
