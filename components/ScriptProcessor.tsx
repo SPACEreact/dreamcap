@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import type { Story, Shot, DirectorVision } from '../types';
-import { generateShotsFromScript, analyzeImageStyle } from '../services/geminiService';
-import { FilmIcon, MagicIcon, CameraIcon } from './Icon';
+import { generateShotsFromScript, analyzeImageStyle, suggestStylesFromScript } from '../services/geminiService';
+import { FilmIcon, MagicIcon, CameraIcon, SparklesIcon } from './Icon';
 
 interface ScriptProcessorProps {
   onProcessComplete: (story: Pick<Story, 'title' | 'logline'>, shots: Shot[], directorInstructions: string, vision?: DirectorVision) => void;
@@ -21,6 +21,8 @@ const ScriptProcessor: React.FC<ScriptProcessorProps> = ({ onProcessComplete }) 
   const [isLoading, setIsLoading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [vision, setVision] = useState<DirectorVision | undefined>(undefined);
+  const [suggestedStyles, setSuggestedStyles] = useState<DirectorVision[]>([]);
+  const [isSuggestingStyles, setIsSuggestingStyles] = useState(false);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -38,6 +40,7 @@ const ScriptProcessor: React.FC<ScriptProcessorProps> = ({ onProcessComplete }) 
           colorPalette: style.colorPalette || '',
           inspirations: style.inspirations || ''
         });
+        setSuggestedStyles([]); // Clear suggestions if manual upload is used
       } catch (error) {
         console.error("Failed to analyze image", error);
         alert("Failed to analyze image style. Please try again.");
@@ -46,6 +49,28 @@ const ScriptProcessor: React.FC<ScriptProcessorProps> = ({ onProcessComplete }) 
       }
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleSuggestStyles = async () => {
+    if (!script.trim()) {
+      alert("Please paste your script first to get style suggestions.");
+      return;
+    }
+    setIsSuggestingStyles(true);
+    try {
+      const styles = await suggestStylesFromScript(script);
+      setSuggestedStyles(styles);
+    } catch (error) {
+      console.error("Failed to suggest styles:", error);
+      alert("Failed to generate style suggestions. Please try again.");
+    } finally {
+      setIsSuggestingStyles(false);
+    }
+  };
+
+  const handleSelectStyle = (style: DirectorVision) => {
+    setVision(style);
+    setSuggestedStyles([]); // Clear suggestions after selection
   };
 
   const handleSubmit = async () => {
@@ -100,26 +125,57 @@ const ScriptProcessor: React.FC<ScriptProcessorProps> = ({ onProcessComplete }) 
                     Style Extracted: {vision.genre} / {vision.tone}
                   </span>
                 ) : (
-                  "Upload a reference image to guide the AI's visual style."
+                  "Upload a reference image or ask AI to suggest a style."
                 )}
               </p>
             </div>
 
-            <label className={`cursor-pointer flex items-center gap-3 px-6 py-3 rounded-lg font-bold transition-all ${isAnalyzing ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'cinematic-button'}`}>
-              {isAnalyzing ? (
-                <>
-                  <LoadingSpinner />
-                  Analyzing...
-                </>
-              ) : (
-                <>
-                  <CameraIcon />
-                  {vision ? 'Change Reference' : 'Upload Reference'}
-                </>
-              )}
-              <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={isAnalyzing} />
-            </label>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleSuggestStyles}
+                disabled={isSuggestingStyles || isAnalyzing}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-all bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSuggestingStyles ? <LoadingSpinner /> : <SparklesIcon />}
+                Suggest Styles
+              </button>
+              <label className={`cursor-pointer flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-all ${isAnalyzing ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'cinematic-button'}`}>
+                {isAnalyzing ? (
+                  <>
+                    <LoadingSpinner />
+                    Analyzing...
+                  </>
+                ) : (
+                  <>
+                    <CameraIcon />
+                    {vision ? 'Change Ref' : 'Upload Ref'}
+                  </>
+                )}
+                <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={isAnalyzing} />
+              </label>
+            </div>
           </div>
+
+          {/* Suggested Styles Grid */}
+          {suggestedStyles.length > 0 && (
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-in">
+              {suggestedStyles.map((style, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleSelectStyle(style)}
+                  className="text-left p-4 rounded-lg bg-black/40 border border-gray-700 hover:border-indigo-500 hover:bg-indigo-500/10 transition-all group/card"
+                >
+                  <h4 className="font-bold text-indigo-300 mb-1 group-hover/card:text-indigo-200">{style.genre}</h4>
+                  <p className="text-xs text-gray-400 mb-2">{style.tone}</p>
+                  <div className="flex flex-wrap gap-1">
+                    {style.colorPalette.split(',').slice(0, 3).map((color, i) => (
+                      <span key={i} className="text-[10px] px-1.5 py-0.5 bg-gray-800 rounded text-gray-300">{color.trim()}</span>
+                    ))}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="cinematic-glass rounded-2xl shadow-2xl p-6">

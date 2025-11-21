@@ -179,6 +179,7 @@ export const generateShotsFromScript = async (script: string, directorInstructio
         ---
 
         Return a single, complete JSON object containing the 'title', 'logline', and a 'shots' array. The shots array must strictly follow the provided JSON schema.
+        Do not include any markdown formatting (like \`\`\`json). Just return the raw JSON.
     `;
 
   try {
@@ -188,21 +189,20 @@ export const generateShotsFromScript = async (script: string, directorInstructio
       contents: prompt,
       config: {
         responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            title: { type: Type.STRING },
-            logline: { type: Type.STRING },
-            shots: { type: Type.ARRAY, items: shotSchema }
-          },
-          required: ["title", "logline", "shots"]
-        },
+        // Removed strict schema to improve robustness
         thinkingConfig: { thinkingBudget: 32768 },
       },
     });
 
-    const jsonText = response.text.trim();
-    console.log("Gemini response received:", jsonText.substring(0, 200) + "..."); // Log first 200 chars
+    let jsonText = response.text.trim();
+    // Cleanup potential markdown
+    if (jsonText.startsWith('```json')) {
+      jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+    } else if (jsonText.startsWith('```')) {
+      jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+    }
+
+    console.log("Gemini response received:", jsonText.substring(0, 200) + "...");
     const parsed = JSON.parse(jsonText);
 
     const story = {
@@ -225,11 +225,59 @@ export const generateShotsFromScript = async (script: string, directorInstructio
 
   } catch (error) {
     console.error("Error generating shots from script:", error);
-    // Return empty but don't throw to avoid crashing, let App handle empty shots
     return { story: { title: '', logline: '' }, shots: [] };
   }
 };
 
+export const suggestStylesFromScript = async (script: string): Promise<DirectorVision[]> => {
+  if (!ai || !isApiKeySet()) return Promise.resolve([]);
+
+  const prompt = `
+    Analyze the following script and suggest 3 distinct, creative visual styles (Director's Visions) that would fit the narrative.
+    For each style, provide a Genre, Tone, Color Palette, and Inspirations.
+    
+    Script:
+    ---
+    ${script}
+    ---
+
+    Return a JSON object with a key "styles" containing an array of 3 objects. Each object must have: 'genre', 'tone', 'colorPalette', 'inspirations'.
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-pro',
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            styles: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  genre: { type: Type.STRING },
+                  tone: { type: Type.STRING },
+                  colorPalette: { type: Type.STRING },
+                  inspirations: { type: Type.STRING },
+                },
+                required: ["genre", "tone", "colorPalette", "inspirations"]
+              }
+            }
+          }
+        }
+      }
+    });
+
+    const parsed = JSON.parse(response.text);
+    return parsed.styles || [];
+  } catch (error) {
+    console.error("Error suggesting styles:", error);
+    return [];
+  }
+};
 
 export const getInitialScene = async (story: Story, directorVision: DirectorVision, sceneEmotionalCore: string): Promise<Shot[]> => {
   if (!ai || !isApiKeySet()) return Promise.resolve([]);
