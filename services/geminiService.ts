@@ -102,10 +102,14 @@ Example:
 
 const isApiKeySet = () => {
   if (!API_KEY) {
-    console.warn("API_KEY environment variable not set. AI features will be disabled.");
-    alert("Please set your Gemini API key in the environment variables (API_KEY) to use AI features.");
+    console.error("❌ Gemini API Key is NOT set!");
+    console.error("📝 Please create a .env.local file in the project root with:");
+    console.error("   GEMINI_API_KEY=your_api_key_here");
+    console.error("🔗 Get your API key from: https://aistudio.google.com/apikey");
+    alert("⚠️ Gemini API Key Missing!\n\nPlease add GEMINI_API_KEY to your .env.local file.\n\nSee the browser console for detailed instructions.");
     return false;
   }
+  console.log("✅ Gemini API Key is configured (" + API_KEY.substring(0, 8) + "...)");
   return true;
 }
 
