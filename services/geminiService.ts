@@ -183,27 +183,35 @@ export const generateShotsFromScript = async (script: string, directorInstructio
     `;
 
   try {
-    console.log("Sending script to Gemini for shot generation...");
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-pro',
       contents: prompt,
       config: {
         responseMimeType: "application/json",
-        // Removed strict schema to improve robustness
         thinkingConfig: { thinkingBudget: 32768 },
       },
     });
 
     let jsonText = response.text.trim();
-    // Cleanup potential markdown
+
+    // Cleanup potential markdown formatting
     if (jsonText.startsWith('```json')) {
       jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
     } else if (jsonText.startsWith('```')) {
       jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
     }
 
-    console.log("Gemini response received:", jsonText.substring(0, 200) + "...");
-    const parsed = JSON.parse(jsonText);
+    let parsed;
+    try {
+      parsed = JSON.parse(jsonText);
+    } catch (parseError) {
+      console.error("JSON parsing failed:", parseError);
+      throw new Error("Failed to parse AI response as JSON");
+    }
+
+    if (!parsed || typeof parsed !== 'object') {
+      throw new Error("Invalid response structure from AI");
+    }
 
     const story = {
       title: parsed.title || 'Untitled Story',
@@ -216,10 +224,6 @@ export const generateShotsFromScript = async (script: string, directorInstructio
         id: `gemini-script-${new Date().toISOString()}-${Math.random()}`,
       }))
       : [];
-
-    if (shots.length === 0) {
-      console.warn("Gemini returned 0 shots.");
-    }
 
     return { story, shots };
 
