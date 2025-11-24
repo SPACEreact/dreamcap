@@ -115,6 +115,24 @@ const isApiKeySet = () => {
 
 const ai = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
 
+export const testConnection = async (): Promise<{ success: boolean; message: string; model?: string }> => {
+  if (!ai || !API_KEY) {
+    return { success: false, message: "API Key is missing or invalid." };
+  }
+
+  try {
+    const modelName = 'gemini-2.5-flash'; // Use the faster model for testing
+    const response = await ai.models.generateContent({
+      model: modelName,
+      contents: "Test connection. Reply with 'OK'.",
+    });
+    return { success: true, message: "Connection successful!", model: modelName };
+  } catch (error: any) {
+    console.error("Connection test failed:", error);
+    return { success: false, message: error.message || "Unknown error", model: 'gemini-2.5-flash' };
+  }
+};
+
 const shotSchema = {
   type: Type.OBJECT,
   properties: {

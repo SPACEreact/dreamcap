@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { Story, Shot, DirectorVision } from '../types';
 import { generateShotsFromScript, analyzeImageStyle, suggestStylesFromScript } from '../services/geminiService';
 import { FilmIcon, MagicIcon, CameraIcon, SparklesIcon } from './Icon';
+import { DebugPanel } from './DebugPanel';
 
 interface ScriptProcessorProps {
   onProcessComplete: (story: Pick<Story, 'title' | 'logline'>, shots: Shot[], directorInstructions: string, vision?: DirectorVision) => void;
@@ -220,7 +221,9 @@ const ScriptProcessor: React.FC<ScriptProcessorProps> = ({ onProcessComplete }) 
           </button>
         </div>
       </div>
-    </div>
+
+      <DebugPanel />
+    </div >
   );
 };
 
