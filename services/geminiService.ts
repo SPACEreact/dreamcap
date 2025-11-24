@@ -330,3 +330,175 @@ export const searchForInspirations = async (query: string): Promise<string> => {
   // Mock implementation for now as Google Search tool requires specific setup
   return `Inspiration for ${query}: Look at works by Roger Deakins and Christopher Nolan.`;
 };
+
+export const getSuggestionForField = async (field: 'logline' | 'character' | 'setting', context: Story): Promise<string> => {
+  const genAI = getGenAI();
+  if (!genAI) return '';
+
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+  let prompt = '';
+  switch (field) {
+    case 'logline':
+      prompt = `Given this story title: "${context.title}", suggest a compelling logline.`;
+      break;
+    case 'character':
+      prompt = `Given this story: "${context.title} - ${context.logline}", suggest an interesting character.`;
+      break;
+    case 'setting':
+      prompt = `Given this story: "${context.title} - ${context.logline}", suggest a vivid setting.`;
+      break;
+  }
+
+  try {
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    return response.text();
+  } catch (error) {
+    console.error("Error getting suggestion:", error);
+    return '';
+  }
+};
+
+export const enrichWithSearch = async (subject: string, existingDescription: string): Promise<string> => {
+  const genAI = getGenAI();
+  if (!genAI) return existingDescription;
+
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+  const prompt = `Enrich the following description for a fictional story by incorporating real-world details.
+    Subject: "${subject}"
+    Current Description: "${existingDescription}"
+    
+    Find interesting, accurate, and evocative details about the subject and weave them into a more detailed and compelling paragraph.`;
+
+  try {
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    return response.text();
+  } catch (error) {
+    console.error("Error enriching with search:", error);
+    return existingDescription;
+  }
+};
+
+export const getGeminiSceneSuggestions = async (story: Story, directorVision: DirectorVision, sceneEmotionalCore: string): Promise<Shot[]> => {
+  const genAI = getGenAI();
+  if (!genAI) return [];
+
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+
+  const prompt = `
+    ${AI_CREATIVE_TEAM_KNOWLEDGE_BASE}
+    
+    Generate 3 cinematic shot suggestions for this scene.
+    
+    Story: ${story.title} - ${story.logline}
+    Vision: ${JSON.stringify(directorVision)}
+    Emotional Core: ${sceneEmotionalCore}
+    
+    Return JSON with a "shots" array.
+  `;
+
+  try {
+    const result = await model.generateContent({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: {
+        responseMimeType: "application/json",
+      },
+    });
+    const response = await result.response;
+    const parsed = JSON.parse(response.text());
+    return parsed.shots || [];
+  } catch (error) {
+    console.error("Error getting scene suggestions:", error);
+    return [];
+  }
+};
+
+export const getGeminiShotDetails = async (story: Story, directorVision: DirectorVision, shotDescription: string, sceneEmotionalCore: string): Promise<Partial<Shot>> => {
+  const genAI = getGenAI();
+  if (!genAI) return {};
+
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+
+  const prompt = `
+    ${AI_CREATIVE_TEAM_KNOWLEDGE_BASE}
+    
+    Generate detailed cinematic choices for this shot.
+    
+    Story: ${story.title} - ${story.logline}
+    Vision: ${JSON.stringify(directorVision)}
+    Emotional Core: ${sceneEmotionalCore}
+    Shot Description: ${shotDescription}
+    
+    Return JSON with shot details (shotType, cameraAngle, cameraMovement, visual, audio, etc).
+  `;
+
+  try {
+    const result = await model.generateContent({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: {
+        responseMimeType: "application/json",
+      },
+    });
+    const response = await result.response;
+    return JSON.parse(response.text());
+  } catch (error) {
+    console.error("Error getting shot details:", error);
+    return {};
+  }
+};
+
+export const getDirectorNoteSuggestion = async (story: Story, directorVision: DirectorVision, shot: Shot, sceneEmotionalCore: string): Promise<string> => {
+  const genAI = getGenAI();
+  if (!genAI) return '';
+
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+
+  const prompt = `
+    ${AI_CREATIVE_TEAM_KNOWLEDGE_BASE}
+    
+    Provide a director's note for this shot.
+    
+    Story: ${story.title}
+    Vision: ${directorVision.genre} / ${directorVision.tone}
+    Emotional Core: ${sceneEmotionalCore}
+    Shot: ${shot.description}
+    Cinematic Choices: ${shot.shotType}, ${shot.cameraAngle}, ${shot.cameraMovement}
+  `;
+
+  try {
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    return response.text().trim();
+  } catch (error) {
+    console.error("Error getting director note:", error);
+    return '';
+  }
+};
+
+export const enhancePromptWithGemini = async (prompt: string): Promise<string> => {
+  const genAI = getGenAI();
+  if (!genAI) return prompt;
+
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+  const rewritePrompt = `
+    You are a master prompt engineer and cinematographer.
+    Rewrite the following prompt to be more cinematic, descriptive, and evocative for image generation.
+    
+    Original Prompt: ${prompt}
+    
+    Enhanced Cinematic Prompt:
+  `;
+
+  try {
+    const result = await model.generateContent(rewritePrompt);
+    const response = await result.response;
+    return response.text().trim();
+  } catch (error) {
+    console.error("Error enhancing prompt:", error);
+    return prompt;
+  }
+};
