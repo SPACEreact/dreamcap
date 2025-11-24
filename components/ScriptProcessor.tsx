@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import type { Story, Shot, DirectorVision } from '../types';
 import { generateShotsFromScript, analyzeImageStyle, suggestStylesFromScript } from '../services/geminiService';
-import { FilmIcon, MagicIcon, CameraIcon, SparklesIcon } from './Icon';
+import { FilmIcon, MagicIcon, CameraIcon, SparklesIcon, ClipboardListIcon } from './Icon';
 import { DebugPanel } from './DebugPanel';
 
 interface ScriptProcessorProps {
@@ -211,14 +211,28 @@ const ScriptProcessor: React.FC<ScriptProcessorProps> = ({ onProcessComplete }) 
               className="cinematic-input h-24 font-mono text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
             />
           </div>
-          <button
-            onClick={handleSubmit}
-            disabled={isLoading}
-            className="w-full mt-6 cinematic-button flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isLoading ? <LoadingSpinner /> : <FilmIcon />}
-            Generate Cinematic Reel
-          </button>
+
+          <div className="flex gap-4 mt-6">
+            <button
+              onClick={() => {
+                // Copy script content to clipboard
+                navigator.clipboard.writeText(script);
+                alert("Script copied to clipboard!");
+              }}
+              className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold py-3 px-6 rounded-xl transition-all flex items-center justify-center gap-2 border border-gray-700"
+            >
+              <ClipboardListIcon /> Copy Script
+            </button>
+
+            <button
+              onClick={handleSubmit}
+              disabled={isLoading}
+              className="flex-[2] cinematic-button flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? <LoadingSpinner /> : <FilmIcon />}
+              Generate Cinematic Reel
+            </button>
+          </div>
         </div>
       </div>
 

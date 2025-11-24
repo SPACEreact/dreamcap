@@ -1,6 +1,4 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
-// FIX: Aliased the DirectorVision type to resolve a name conflict with the DirectorVision component.
 import type { Story, Shot, ChatMessage, Soundscape, DirectorVision as DirectorVisionType } from './types';
 import { AppStep, AppMode } from './types';
 import StoryBuilder from './components/StoryBuilder';
@@ -11,15 +9,16 @@ import PromptViewer from './components/PromptViewer';
 import Chatbot from './components/Chatbot';
 import StartScreen from './components/StartScreen';
 import ScriptProcessor from './components/ScriptProcessor';
-import { CameraIcon, FilmIcon, SparklesIcon, ChatIcon, ClipboardListIcon, HeartIcon, SpeakerIcon, LightningIcon } from './components/Icon';
+import { CameraIcon, FilmIcon, SparklesIcon, ChatIcon, ClipboardListIcon, HeartIcon, SpeakerIcon, LightningIcon, SettingsIcon } from './components/Icon';
 import { generateChatResponse, getInitialScene } from './services/geminiService';
-
+import { SettingsModal } from './components/SettingsModal';
 
 const App: React.FC = () => {
   const [appMode, setAppMode] = useState<AppMode>(AppMode.SELECTION);
   const [step, setStep] = useState<AppStep>(AppStep.STORY);
   const [isPastelMode, setIsPastelMode] = useState(false);
   const [isQuickMode, setIsQuickMode] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const [story, setStory] = useState<Story>({
     title: '',
@@ -27,7 +26,7 @@ const App: React.FC = () => {
     characters: [{ name: '', description: '' }],
     setting: { name: '', description: '' },
   });
-  // FIX: Used the aliased DirectorVisionType for the state's type annotation.
+
   const [directorVision, setDirectorVision] = useState<DirectorVisionType>({
     genre: '',
     tone: '',
@@ -44,6 +43,22 @@ const App: React.FC = () => {
   const [isBotThinking, setIsBotThinking] = useState(false);
   const [directorInstructions, setDirectorInstructions] = useState('');
   const [isInitializingScene, setIsInitializingScene] = useState(false);
+
+  useEffect(() => {
+    // Check if API key is missing for the active provider
+    const provider = localStorage.getItem('ACTIVE_PROVIDER') || 'gemini';
+    const key = localStorage.getItem(`API_KEY_${provider.toUpperCase()}`);
+    const envKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
+
+    if (!key && !envKey && provider === 'gemini') {
+      // If no key found, open settings automatically on first load
+      const hasSeenSettings = sessionStorage.getItem('hasSeenSettings');
+      if (!hasSeenSettings) {
+        setIsSettingsOpen(true);
+        sessionStorage.setItem('hasSeenSettings', 'true');
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const initializeScene = async () => {
@@ -240,7 +255,6 @@ const App: React.FC = () => {
   }
 
   const appTitle = "Cinematic Prompt Weaver";
-  const landingTitle = "Cinematic Prompt Weaver";
 
   return (
     <div className={`min-h-screen font-sans transition-colors duration-500 selection:bg-indigo-500/30 ${isPastelMode ? 'bg-gradient-to-br from-pink-100 via-purple-100 to-indigo-100 text-gray-800' : 'text-gray-100'}`}>
@@ -255,7 +269,7 @@ const App: React.FC = () => {
 
       <div className="container mx-auto px-4 py-6 relative z-10">
         <header className="flex flex-col md:flex-row items-center justify-between mb-8 py-4 border-b border-gray-800/50">
-          <div className="flex items-center gap-4 mb-4 md:mb-0">
+          <div className="flex items-center gap-4 mb-4 md:mb-0 cursor-pointer group" onClick={() => window.location.reload()}>
             <div className={`p-2 rounded-lg ${isPastelMode ? 'bg-pink-200 text-pink-600' : 'bg-indigo-500/20 text-indigo-400'}`}>
               <FilmIcon />
             </div>
@@ -277,6 +291,14 @@ const App: React.FC = () => {
 
             <button onClick={() => setIsPastelMode(!isPastelMode)} className={`p-2 rounded-full transition-all ${isPastelMode ? 'bg-pink-200 text-pink-600' : 'bg-gray-800 text-gray-400 hover:text-pink-400 hover:bg-gray-700'}`}>
               <HeartIcon />
+            </button>
+
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className={`p-2 rounded-full transition-all ${isPastelMode ? 'bg-pink-200 text-pink-600' : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'}`}
+              title="Settings"
+            >
+              <SettingsIcon />
             </button>
           </div>
         </header>
@@ -302,6 +324,8 @@ const App: React.FC = () => {
         isThinking={isBotThinking}
         isPastelMode={isPastelMode}
       />
+
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
     </div>
   );
 };
