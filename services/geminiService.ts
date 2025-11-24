@@ -3,6 +3,65 @@ import type { Story, Shot, DirectorVision, Soundscape, ChatMessage } from '../ty
 import { SHOT_TYPES, CAMERA_ANGLES, CAMERA_MOVEMENTS, FOCAL_LENGTHS, APERTURES, LIGHTING_STYLES, COLOR_GRADES, COMPOSITIONS } from '../constants';
 import { getApiKey } from './apiKeyManager';
 
+// Model fallback chain (newest to oldest, most likely to work first)
+const MODEL_FALLBACK_CHAIN = [
+  'gemini-2.0-flash-exp',
+  'gemini-1.5-flash-latest',
+  'gemini-1.5-flash-002',
+  'gemini-1.5-flash-001',
+  'gemini-1.5-flash',
+  'gemini-1.5-pro-latest',
+  'gemini-1.5-pro-002',
+  'gemini-1.5-pro-001',
+  'gemini-1.5-pro',
+  'gemini-pro'
+];
+
+// Cache for working models
+const WORKING_MODEL_CACHE_KEY = 'GEMINI_WORKING_MODEL';
+
+// Get cached working model
+const getCachedModel = (): string | null => {
+  return localStorage.getItem(WORKING_MODEL_CACHE_KEY);
+};
+
+// Cache the working model
+const cacheWorkingModel = (modelName: string) => {
+  localStorage.setItem(WORKING_MODEL_CACHE_KEY, modelName);
+  console.log(`✅ Cached working model: ${modelName}`);
+};
+
+// Try to find a working model
+const findWorkingModel = async (genAI: GoogleGenerativeAI): Promise<string> => {
+  // First try cached model
+  const cached = getCachedModel();
+  if (cached) {
+    try {
+      const model = genAI.getGenerativeModel({ model: cached });
+      await model.generateContent("test");
+      console.log(`✅ Using cached model: ${cached}`);
+      return cached;
+    } catch (e) {
+      console.warn(`❌ Cached model ${cached} failed, trying fallback chain...`);
+    }
+  }
+
+  // Try fallback chain
+  for (const modelName of MODEL_FALLBACK_CHAIN) {
+    try {
+      const model = genAI.getGenerativeModel({ model: modelName });
+      await model.generateContent("test");
+      console.log(`✅ Found working model: ${modelName}`);
+      cacheWorkingModel(modelName);
+      return modelName;
+    } catch (e: any) {
+      console.warn(`❌ Model ${modelName} failed:`, e.message);
+    }
+  }
+
+  throw new Error("No working Gemini models found. Please check your API key or try again later.");
+};
+
 // Initialize Gemini API
 const getGenAI = () => {
   const apiKey = getApiKey('gemini');
@@ -72,15 +131,11 @@ export const testConnection = async (): Promise<{ success: boolean; message: str
     const genAI = getGenAI();
     if (!genAI) return { success: false, message: "API Key is missing. Please add it in Settings." };
 
-    const modelName = "gemini-1.5-flash";
-    const model = genAI.getGenerativeModel({ model: modelName });
-
-    const result = await model.generateContent("Test connection. Reply with 'OK'.");
-    const response = await result.response;
+    const modelName = await findWorkingModel(genAI);
     return { success: true, message: "Connection successful!", model: modelName };
   } catch (error: any) {
     console.error("Connection test failed:", error);
-    return { success: false, message: error.message || "Unknown error", model: 'gemini-1.5-flash' };
+    return { success: false, message: error.message || "Unknown error" };
   }
 };
 
@@ -92,7 +147,8 @@ export const generateShotsFromScript = async (
   const genAI = getGenAI();
   if (!genAI) throw new Error("API Key is missing. Please add your Gemini API Key in Settings.");
 
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+  const modelName = await findWorkingModel(genAI);
+  const model = genAI.getGenerativeModel({ model: modelName });
 
   const prompt = `
         ${AI_CREATIVE_TEAM_KNOWLEDGE_BASE}
@@ -139,7 +195,8 @@ export const suggestStylesFromScript = async (script: string): Promise<DirectorV
   const genAI = getGenAI();
   if (!genAI) throw new Error("API Key is missing. Please add your Gemini API Key in Settings.");
 
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+  const modelName = await findWorkingModel(genAI);
+  const model = genAI.getGenerativeModel({ model: modelName });
 
   const prompt = `
     Analyze the following script and suggest 3 distinct, creative visual styles (Director's Visions) that would fit the narrative.
@@ -173,7 +230,8 @@ export const getInitialScene = async (story: Story, directorVision: DirectorVisi
   const genAI = getGenAI();
   if (!genAI) throw new Error("API Key is missing. Please add your Gemini API Key in Settings.");
 
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+  const modelName = await findWorkingModel(genAI);
+  const model = genAI.getGenerativeModel({ model: modelName });
 
   const prompt = `
         ${AI_CREATIVE_TEAM_KNOWLEDGE_BASE}
@@ -209,7 +267,8 @@ export const enrichStoryDetails = async (currentStory: Story): Promise<Story> =>
   const genAI = getGenAI();
   if (!genAI) throw new Error("API Key is missing. Please add your Gemini API Key in Settings.");
 
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const modelName = await findWorkingModel(genAI);
+  const model = genAI.getGenerativeModel({ model: modelName });
 
   const prompt = `
     Enrich these story details with more depth and creativity.
@@ -242,7 +301,8 @@ export const generateChatResponse = async (history: ChatMessage[]): Promise<stri
   const genAI = getGenAI();
   if (!genAI) return "AI features are currently disabled.";
 
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const modelName = await findWorkingModel(genAI);
+  const model = genAI.getGenerativeModel({ model: modelName });
 
   const prompt = `You are a helpful AI assistant for filmmakers.
   
@@ -265,7 +325,8 @@ export const analyzeImageStyle = async (imageBase64: string): Promise<Partial<Di
   const genAI = getGenAI();
   if (!genAI) return {};
 
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+  const modelName = await findWorkingModel(genAI);
+  const model = genAI.getGenerativeModel({ model: modelName });
 
   // Remove header if present
   const base64Data = imageBase64.split(',')[1] || imageBase64;
@@ -292,7 +353,8 @@ export const generateSoundscape = async (story: Story, directorVision: DirectorV
   const genAI = getGenAI();
   if (!genAI) return [];
 
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const modelName = await findWorkingModel(genAI);
+  const model = genAI.getGenerativeModel({ model: modelName });
 
   const prompt = `Generate a soundscape (music, sfx, ambience) for this scene. Return JSON with "elements" array.`;
 
@@ -314,7 +376,8 @@ export const rewriteLogline = async (title: string, logline: string, tone: strin
   const genAI = getGenAI();
   if (!genAI) throw new Error("API Key is missing.");
 
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const modelName = await findWorkingModel(genAI);
+  const model = genAI.getGenerativeModel({ model: modelName });
 
   const prompt = `Rewrite logline for "${title}" to be "${tone}". Original: "${logline}"`;
 
@@ -335,7 +398,8 @@ export const getSuggestionForField = async (field: 'logline' | 'character' | 'se
   const genAI = getGenAI();
   if (!genAI) return '';
 
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const modelName = await findWorkingModel(genAI);
+  const model = genAI.getGenerativeModel({ model: modelName });
 
   let prompt = '';
   switch (field) {
@@ -364,7 +428,8 @@ export const enrichWithSearch = async (subject: string, existingDescription: str
   const genAI = getGenAI();
   if (!genAI) return existingDescription;
 
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const modelName = await findWorkingModel(genAI);
+  const model = genAI.getGenerativeModel({ model: modelName });
 
   const prompt = `Enrich the following description for a fictional story by incorporating real-world details.
     Subject: "${subject}"
@@ -386,7 +451,8 @@ export const getGeminiSceneSuggestions = async (story: Story, directorVision: Di
   const genAI = getGenAI();
   if (!genAI) return [];
 
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+  const modelName = await findWorkingModel(genAI);
+  const model = genAI.getGenerativeModel({ model: modelName });
 
   const prompt = `
     ${AI_CREATIVE_TEAM_KNOWLEDGE_BASE}
@@ -420,7 +486,8 @@ export const getGeminiShotDetails = async (story: Story, directorVision: Directo
   const genAI = getGenAI();
   if (!genAI) return {};
 
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+  const modelName = await findWorkingModel(genAI);
+  const model = genAI.getGenerativeModel({ model: modelName });
 
   const prompt = `
     ${AI_CREATIVE_TEAM_KNOWLEDGE_BASE}
@@ -454,7 +521,8 @@ export const getDirectorNoteSuggestion = async (story: Story, directorVision: Di
   const genAI = getGenAI();
   if (!genAI) return '';
 
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+  const modelName = await findWorkingModel(genAI);
+  const model = genAI.getGenerativeModel({ model: modelName });
 
   const prompt = `
     ${AI_CREATIVE_TEAM_KNOWLEDGE_BASE}
@@ -482,7 +550,8 @@ export const enhancePromptWithGemini = async (prompt: string): Promise<string> =
   const genAI = getGenAI();
   if (!genAI) return prompt;
 
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const modelName = await findWorkingModel(genAI);
+  const model = genAI.getGenerativeModel({ model: modelName });
 
   const rewritePrompt = `
     You are a master prompt engineer and cinematographer.
