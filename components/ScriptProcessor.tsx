@@ -60,9 +60,9 @@ const ScriptProcessor: React.FC<ScriptProcessorProps> = ({ onProcessComplete }) 
     try {
       const styles = await suggestStylesFromScript(script);
       setSuggestedStyles(styles);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to suggest styles:", error);
-      alert("Failed to generate style suggestions. Please try again.");
+      alert(`Failed to generate style suggestions. Error: ${error.message || "Unknown error"}. Please check the console for details.`);
     } finally {
       setIsSuggestingStyles(false);
     }
@@ -82,9 +82,9 @@ const ScriptProcessor: React.FC<ScriptProcessorProps> = ({ onProcessComplete }) 
     try {
       const { story, shots } = await generateShotsFromScript(script, directorInstructions, vision);
       onProcessComplete(story, shots, directorInstructions, vision);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to process script:", error);
-      alert("There was an error processing your script. Please check your API key and try again.");
+      alert(`There was an error processing your script. Error: ${error.message || "Unknown error"}. Please check your API key and try again.`);
       setIsLoading(false);
     }
   };
