@@ -12,6 +12,8 @@ import ScriptProcessor from './components/ScriptProcessor';
 import { CameraIcon, FilmIcon, SparklesIcon, ChatIcon, ClipboardListIcon, HeartIcon, SpeakerIcon, LightningIcon, SettingsIcon } from './components/Icon';
 import { generateChatResponse, getInitialScene } from './services/geminiService';
 import { SettingsModal } from './components/SettingsModal';
+import { syncConfigWithBackend } from './services/apiKeyManager';
+import { SaveIcon, UploadIcon } from './components/Icon';
 
 const App: React.FC = () => {
   const [appMode, setAppMode] = useState<AppMode>(AppMode.SELECTION);
@@ -58,6 +60,9 @@ const App: React.FC = () => {
         sessionStorage.setItem('hasSeenSettings', 'true');
       }
     }
+
+    // Sync with backend
+    syncConfigWithBackend();
   }, []);
 
   useEffect(() => {
