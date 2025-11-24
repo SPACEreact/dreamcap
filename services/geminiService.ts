@@ -188,7 +188,7 @@ export const generateShotsFromScript = async (script: string, directorInstructio
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-1.5-pro',
+      model: 'gemini-2.0-flash-exp',
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -254,7 +254,7 @@ export const suggestStylesFromScript = async (script: string): Promise<DirectorV
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-1.5-pro',
+      model: 'gemini-2.0-flash-exp',
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -314,7 +314,7 @@ export const getInitialScene = async (story: Story, directorVision: DirectorVisi
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-1.5-pro',
+      model: 'gemini-2.0-flash-exp',
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -369,7 +369,7 @@ export const getGeminiSceneSuggestions = async (story: Story, directorVision: Di
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-1.5-pro',
+      model: 'gemini-2.0-flash-exp',
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -431,7 +431,7 @@ export const getGeminiShotDetails = async (story: Story, directorVision: Directo
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-1.5-pro',
+      model: 'gemini-2.0-flash-exp',
       contents: contextPrompt,
       config: {
         responseMimeType: "application/json",
@@ -463,7 +463,7 @@ export const getDirectorNoteSuggestion = async (story: Story, directorVision: Di
     `;
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-1.5-pro', // Using Pro for more nuanced creative insight
+      model: 'gemini-2.0-flash-exp',
       contents: prompt,
     });
     return response.text.trim();
@@ -490,7 +490,7 @@ export const makePromptCinematic = async (prompt: string): Promise<string> => {
     `;
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.0-flash-exp',
       contents: rewritePrompt,
     });
     return response.text.trim();
@@ -513,7 +513,7 @@ export const enrichWithSearch = async (subject: string, existingDescription: str
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.0-flash-exp',
       contents: prompt,
       config: {
         tools: [{ googleSearch: {} }],
@@ -544,7 +544,7 @@ export const getSuggestionForField = async (field: 'logline' | 'character' | 'se
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.0-flash-exp',
       contents: prompt,
     });
     return response.text;
@@ -603,7 +603,7 @@ export const generateSoundscape = async (story: Story, directorVision: DirectorV
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-1.5-pro',
+      model: 'gemini-2.0-flash-exp',
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -633,7 +633,7 @@ export const generateChatResponse = async (history: ChatMessage[]): Promise<stri
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.0-flash-exp',
       contents: prompt,
     });
     return response.text;
@@ -668,7 +668,7 @@ export const analyzeImageStyle = async (imageBase64: string): Promise<Partial<Di
     const base64Data = imageBase64.split(',')[1] || imageBase64;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-1.5-pro',
+      model: 'gemini-2.0-flash-exp',
       contents: [
         { text: prompt },
         { inlineData: { mimeType: 'image/jpeg', data: base64Data } }
