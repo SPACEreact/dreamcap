@@ -18,30 +18,30 @@ let cachedWorkingModel = null;
 
 // Find working model
 const findWorkingModel = async (genAI) => {
-    if (cachedWorkingModel) {
-        try {
-            const model = genAI.getGenerativeModel({ model: cachedWorkingModel });
-            await model.generateContent("test");
-            return cachedWorkingModel;
-        } catch (e) {
-            console.warn(`Cached model ${cachedWorkingModel} failed, trying fallback...`);
-            cachedWorkingModel = null;
+    // Simplified: try a single known model first
+    const primaryModel = 'gemini-1.5-flash';
+    try {
+        const model = genAI.getGenerativeModel({ model: primaryModel });
+        await model.generateContent('test');
+        cachedWorkingModel = primaryModel;
+        console.log(`✅ Using primary model: ${primaryModel}`);
+        return primaryModel;
+    } catch (e) {
+        console.warn(`❌ Primary model ${primaryModel} failed, trying fallback chain`);
+        // fallback to original chain if primary fails
+        for (const modelName of MODEL_FALLBACK_CHAIN) {
+            try {
+                const model = genAI.getGenerativeModel({ model: modelName });
+                await model.generateContent('test');
+                console.log(`✅ Found working model: ${modelName}`);
+                cachedWorkingModel = modelName;
+                return modelName;
+            } catch (_) {
+                // ignore
+            }
         }
+        throw new Error('No working Gemini models found');
     }
-
-    for (const modelName of MODEL_FALLBACK_CHAIN) {
-        try {
-            const model = genAI.getGenerativeModel({ model: modelName });
-            await model.generateContent("test");
-            console.log(`✅ Found working model: ${modelName}`);
-            cachedWorkingModel = modelName;
-            return modelName;
-        } catch (e) {
-            console.warn(`❌ Model ${modelName} failed`);
-        }
-    }
-
-    throw new Error("No working Gemini models found");
 };
 
 const getGenAI = (apiKey) => {

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { Story, Shot, DirectorVision } from '../types';
-import { generateShotsFromScript, analyzeImageStyle, suggestStylesFromScript } from '../services/geminiService';
+import { generateShotsFromScript, analyzeImageStyle, suggestStylesFromScript } from '../services/aiOrchestrator';
 import { FilmIcon, MagicIcon, CameraIcon, SparklesIcon, ClipboardListIcon } from './Icon';
 import { DebugPanel } from './DebugPanel';
 

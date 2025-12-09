@@ -10,7 +10,7 @@ import Chatbot from './components/Chatbot';
 import StartScreen from './components/StartScreen';
 import ScriptProcessor from './components/ScriptProcessor';
 import { CameraIcon, FilmIcon, SparklesIcon, ChatIcon, ClipboardListIcon, HeartIcon, SpeakerIcon, LightningIcon, SettingsIcon } from './components/Icon';
-import { generateChatResponse, getInitialScene } from './services/geminiService';
+import { generateChatResponse, getInitialScene, initializeAI, getProviderInfo } from './services/aiOrchestrator';
 import { SettingsModal } from './components/SettingsModal';
 import { syncConfigWithBackend } from './services/apiKeyManager';
 import { SaveIcon, UploadIcon } from './components/Icon';

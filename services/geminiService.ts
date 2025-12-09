@@ -17,32 +17,21 @@ const MODEL_FALLBACK_CHAIN = [
   'gemini-pro'
 ];
 
-// Cache for working models
-const WORKING_MODEL_CACHE_KEY = 'GEMINI_WORKING_MODEL';
-
-// Get cached working model
-const getCachedModel = (): string | null => {
-  return localStorage.getItem(WORKING_MODEL_CACHE_KEY);
-};
-
-// Cache the working model
-const cacheWorkingModel = (modelName: string) => {
-  localStorage.setItem(WORKING_MODEL_CACHE_KEY, modelName);
-  console.log(`✅ Cached working model: ${modelName}`);
-};
+// In-memory cache for working model (localStorage doesn't exist in TS services)
+let workingModelCache: string | null = null;
 
 // Try to find a working model
 const findWorkingModel = async (genAI: GoogleGenerativeAI): Promise<string> => {
   // First try cached model
-  const cached = getCachedModel();
-  if (cached) {
+  if (workingModelCache) {
     try {
-      const model = genAI.getGenerativeModel({ model: cached });
+      const model = genAI.getGenerativeModel({ model: workingModelCache });
       await model.generateContent("test");
-      console.log(`✅ Using cached model: ${cached}`);
-      return cached;
+      console.log(`✅ Using cached model: ${workingModelCache}`);
+      return workingModelCache;
     } catch (e) {
-      console.warn(`❌ Cached model ${cached} failed, trying fallback chain...`);
+      console.warn(`❌ Cached model ${workingModelCache} failed, trying fallback chain...`);
+      workingModelCache = null; // Clear invalid cache
     }
   }
 
@@ -52,7 +41,7 @@ const findWorkingModel = async (genAI: GoogleGenerativeAI): Promise<string> => {
       const model = genAI.getGenerativeModel({ model: modelName });
       await model.generateContent("test");
       console.log(`✅ Found working model: ${modelName}`);
-      cacheWorkingModel(modelName);
+      workingModelCache = modelName; // Cache the working model
       return modelName;
     } catch (e: any) {
       console.warn(`❌ Model ${modelName} failed:`, e.message);
